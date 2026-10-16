@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es" data-tema="claro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="color-scheme" content="light">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>Carga de productos · Marketing KAI</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <script>
+    /* tema antes de pintar, para que no parpadee */
+    try {
+      var t = localStorage.getItem('tema') || 'claro';
+      if (t === 'auto') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'oscuro' : 'claro';
+      document.documentElement.dataset.tema = t;
+    } catch (e) { document.documentElement.dataset.tema = 'claro'; }
+  </script>
+  <link rel="preload" href="fonts/Inter-normal-400-800.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header id="barra-sup">
+    <a id="atras" class="atras" href="#/" aria-label="Volver a la lista de productos" data-i="derecha"></a>
+    <img class="marca-k" src="img/kai-k.png" alt="Marketing KAI">
+    <div class="titulos"><h1 id="titulo" style="margin:0">Mis <em>productos</em></h1><div id="negocio" class="negocio"></div></div>
+    <button id="sync-estado" class="sync local" type="button" aria-label="Estado de sincronización"><span>Solo este equipo</span></button>
+  </header>
+  <main id="vista" aria-live="polite"></main>
+  <nav id="tabs" aria-label="Secciones">
+    <a class="nav-logo" href="#/" aria-label="Marketing KAI, ir a productos"><img src="img/kai-logo.png" alt="Marketing KAI"></a>
+    <a class="item-nav" href="#/" data-tab="lista"><span class="ico" data-i="lista"></span><span>Productos</span></a>
+    <a class="item-nav nuevo" href="#/nuevo" data-tab="nuevo"><span class="ico" data-i="mas"></span><span>Nuevo</span></a>
+    <a class="item-nav" href="#/exportar" data-tab="exportar"><span class="ico" data-i="exportar"></span><span>Exportar</span></a>
+    <a class="item-nav" href="#/ajustes" data-tab="ajustes"><span class="ico" data-i="ajustes"></span><span>Ajustes</span></a>
+  </nav>
+  <div id="toasts" role="status" aria-live="polite"></div>
+  <div id="modal" hidden></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

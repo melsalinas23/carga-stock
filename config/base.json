@@ -1,0 +1,40 @@
+{
+ "id": "diagonal",
+ "app_nombre": "Carga de productos",
+ "negocio_nombre": "",
+ "sku_digitos": 0,
+ "categorias": [],
+ "marcas": [],
+ "proveedores": [],
+ "propiedades_sugeridas": [
+  "Material",
+  "Medida",
+  "Terminación",
+  "Color",
+  "Largo"
+ ],
+ "medidas_por_categoria": {},
+ "medidas_generales": {
+  "peso": 0.5,
+  "alto": 20,
+  "ancho": 15,
+  "prof": 10
+ },
+ "frases_por_categoria": {},
+ "defaults": {
+  "mostrar": true,
+  "fisico": true,
+  "envio_gratis": false,
+  "stock": ""
+ },
+ "seo_sufijo": "",
+ "frase_cierre": "",
+ "foto": {
+  "modo": "quitar_fondo",
+  "tam": 1200,
+  "margen": 0.08,
+  "sombra": true,
+  "mejorar": true,
+  "calidad": 0.85
+ }
+}
