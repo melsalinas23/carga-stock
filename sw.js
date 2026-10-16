@@ -3,12 +3,12 @@
 //  2) guarda librerías y tipografías externas la primera vez que se usan,
 //  3) agrega los encabezados que permiten usar varios núcleos del procesador (quitar fondo mucho más rápido)
 //     aunque el sitio esté en un hosting que no permite configurarlos.
-const VERSION = 'v9';
+const VERSION = 'v10';
 const APP = 'app-' + VERSION;
 const LIBS = 'libs-v1';
 const ARCHIVOS = ['./', 'index.html', 'styles.css', 'manifest.webmanifest', 'app-config.js', 'config/base.json',
   'js/app.js', 'js/util.js', 'js/store.js', 'js/remote.js', 'js/config.js', 'js/imagen.js', 'js/exportar.js', 'js/textos.js',
-  'js/vista-lista.js', 'js/vista-producto.js', 'js/vista-exportar.js', 'js/vista-ajustes.js', 'js/fondo-worker.js', 'js/iconos.js', 'js/riel.js', 'js/tema.js',
+  'js/vista-lista.js', 'js/vista-producto.js', 'js/vista-exportar.js', 'js/vista-ajustes.js', 'js/acceso.js', 'js/fondo-worker.js', 'js/iconos.js', 'js/riel.js', 'js/tema.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'img/kai-k.png', 'img/kai-logo.png', 'img/fileteado.webp', 'fonts/Inter-normal-400-800.woff2', 'fonts/PlayfairDisplay-italic-700.woff2'];
 const HOSTS_LIBS = ['cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'staticimgly.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 

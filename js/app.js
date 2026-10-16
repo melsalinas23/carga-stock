@@ -2,6 +2,7 @@
 import appConfig from '../app-config.js';
 import * as store from './store.js';
 import * as remote from './remote.js';
+import * as acceso from './acceso.js';
 import { cargarConfig, cfg } from './config.js';
 import { $, $$, toast } from './util.js';
 import { icono } from './iconos.js';
@@ -65,16 +66,15 @@ function pintarSync() {
 }
 
 // Pantalla de acceso cuando no hay sesión (o no hay base de usuarios): no se muestra nada del negocio.
-function mostrarAcceso(modo, detalle = '') {
+function mostrarAcceso(modo, detalle = '', conf = null) {
   document.body.dataset.acceso = 'cerrado';
   $('#titulo').innerHTML = 'Acceso <em>privado</em>';
   const r = raiz();
-  if (modo === 'login') {
-    vistaLogin(r, ctx, { obligatorio: true, alEntrar: async () => { history.replaceState(null, '', location.pathname + location.search); location.reload(); } });
-    return;
-  }
+  const recargarEnInicio = async () => { history.replaceState(null, '', location.pathname + location.search); location.reload(); };
+  if (modo === 'login') { vistaLogin(r, ctx, { obligatorio: true, alEntrar: recargarEnInicio }); return; }
+  if (modo === 'clave') { acceso.pantallaClave(r, conf, recargarEnInicio); return; }
   const texto = {
-    'sin-base': ['Esta aplicación es de uso interno.', 'Todavía no está conectada la base de usuarios. Si administrás la app, seguí el paso 2 del LEEME.'],
+    'sin-base': ['Esta aplicación es de uso interno.', 'Todavía no está configurado el acceso. Si administrás la app, seguí la sección 2 del LEEME.'],
     'sin-permiso': ['Tu usuario todavía no tiene permiso.', 'Pedile a quien administra la app que agregue tu mail a la lista de personas autorizadas.'],
     error: ['No se pudo conectar.', detalle || 'Revisá tu conexión y volvé a intentar.'],
   }[modo];
@@ -91,14 +91,20 @@ async function arrancar() {
   $$('[data-i]').forEach((el) => { el.innerHTML = icono(el.dataset.i, 22); });
 
   // --- puerta de acceso: sin sesión no se ve ni se usa nada ---
+  // Con base de usuarios (Supabase) manda el login real. Sin ella, si hay clave compartida (config/acceso.json), se pide esa clave.
   const hayBase = !!(url && key);
-  const exige = appConfig.requiereLogin !== false && (hayBase || !HOST_LOCAL.includes(location.hostname));
+  const conf = !hayBase && appConfig.acceso ? await acceso.cargarAcceso(appConfig.acceso) : null;
+  acceso.fijar(conf);
+  const exige = appConfig.requiereLogin !== false && (hayBase || !!conf || !HOST_LOCAL.includes(location.hostname));
   let sesion = null;
   if (hayBase) {
     try { await remote.iniciar({ url, key, negocio: appConfig.negocio || cfg.id }); sesion = await remote.sesion(); }
     catch (e) { console.error(e); if (exige) { mostrarAcceso('error', String(e.message || e)); return; } toast('No se pudo conectar con la base compartida: ' + (e.message || e), 'error'); }
   }
-  if (exige && !sesion) { mostrarAcceso(hayBase ? 'login' : 'sin-base'); return; }
+  if (exige && !hayBase) {
+    if (!conf) { mostrarAcceso('sin-base'); return; }
+    if (!acceso.recordado(conf)) { mostrarAcceso('clave', '', conf); return; }
+  } else if (exige && !sesion) { mostrarAcceso('login'); return; }
   if (exige && sesion) {
     let permitido = false;
     try { permitido = await remote.esEquipo(); } catch (e) { console.error(e); mostrarAcceso('error', 'No se pudo comprobar tu permiso: ' + (e.message || e)); return; }

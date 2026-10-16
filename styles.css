@@ -386,6 +386,8 @@ button.item:hover { background: var(--sup-2); }
 .login-pantalla { position: relative; overflow: hidden; max-width: 460px; margin: 12px auto; padding: 28px 22px; border-radius: 18px; background: var(--negro); color: #fff; }
 .login-pantalla::before { content: ""; position: absolute; inset: 0; background: url(img/fileteado.webp) center / 560px auto; opacity: .16; pointer-events: none; }
 .login-pantalla > * { position: relative; }
+.login-pantalla label.ayuda { display: flex; align-items: center; gap: 10px; min-height: 44px; color: #fff; cursor: pointer; }
+.login-pantalla label.ayuda input { width: 22px; height: 22px; min-height: 0; margin: 0; padding: 0; accent-color: var(--violeta); }
 .login-pantalla h2 { margin: 0 0 6px; font-size: var(--t-2xl); line-height: 1.1; font-weight: 800; letter-spacing: -0.025em; }
 .login-pantalla h2 em { color: var(--violeta); }
 .login-pantalla .ayuda { color: #d7cfe3; }

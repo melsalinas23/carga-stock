@@ -1,6 +1,7 @@
 // Ajustes: quién carga, fotos, categorías y medidas, base compartida, copias de seguridad.
 import * as store from './store.js';
 import * as remote from './remote.js';
+import * as acceso from './acceso.js';
 import { cfg, guardarAjustes, reemplazarConfig, operador, setOperador, categoriasPrincipales, listaProveedores, guardarProveedores } from './config.js';
 import { construirBackup, leerBackup } from './exportar.js';
 import { esc, $, $$, toast, descargar, parseNum, abrirModal, cerrarModal, sinTildes } from './util.js';
@@ -195,7 +196,9 @@ export async function vistaAjustes(raiz, ctx) {
       <p class="ayuda">Sin base compartida, los productos se guardan solo en este equipo. Para que varias personas carguen desde distintos teléfonos o computadoras, conectá la base (se hace una vez; ver LEEME).</p>
       <label class="campo"><span>URL del proyecto</span><input id="n-url" placeholder="https://xxxx.supabase.co" autocomplete="off"></label>
       <label class="campo"><span>Clave pública (anon key)</span><input id="n-key" placeholder="eyJ..." autocomplete="off"></label>
-      <button class="btn primario" id="n-conectar">Conectar</button>`;
+      <button class="btn primario" id="n-conectar">Conectar</button>
+      ${acceso.activo() ? '<hr><p class="ayuda">Este equipo entró con la clave de acceso compartida. Si la clave cambia, o querés que otra persona use este teléfono, cerrá el acceso.</p><button class="btn" id="n-cerrar-acceso">Cerrar acceso en este equipo</button>' : ''}`;
+    const ca = $('#n-cerrar-acceso'); if (ca) ca.onclick = () => { acceso.olvidar(); location.hash = ''; location.reload(); };
     $('#n-conectar').onclick = () => {
       const url = $('#n-url').value.trim(), key = $('#n-key').value.trim();
       if (!/^https:\/\/.+\..+/.test(url) || key.length < 20) { toast('Revisá la URL y la clave', 'error'); return; }
