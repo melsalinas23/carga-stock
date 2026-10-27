@@ -131,6 +131,24 @@ async function arrancar() {
   pintarSync();
   window.addEventListener('hashchange', () => navegar());
   if (ir && !location.hash) location.hash = ir; else await navegar(true);
+  avisoTiendaNube();
+}
+
+// Al instalar la app en una tienda, la función de Supabase vuelve acá con ?tiendanube=<resultado>.
+const AVISOS_TN = {
+  conectada: 'Tienda Nube conectada. La tienda quedó autorizada.',
+  'sin-codigo': 'Tienda Nube no mandó el código de autorización. Volvé a instalar la app.',
+  'falta-configuracion': 'Falta configurar la conexión con Tienda Nube en el servidor.',
+  'error-token': 'Tienda Nube rechazó la autorización. Volvé a instalar la app.',
+  'error-guardar': 'Se autorizó, pero no se pudo guardar el permiso de la tienda en el servidor.',
+};
+function avisoTiendaNube() {
+  const q = new URLSearchParams(location.search);
+  const estado = q.get('tiendanube');
+  if (!estado) return;
+  q.delete('tiendanube');
+  history.replaceState(null, '', location.pathname + (q.size ? '?' + q : '') + location.hash);
+  alert(AVISOS_TN[estado] || 'Tienda Nube: ' + estado);
 }
 
 // Service worker: modo sin conexión + encabezados para usar varios núcleos (si el hosting no los trae, se recarga una vez).
