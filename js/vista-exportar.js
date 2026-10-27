@@ -1,7 +1,9 @@
 // Pantalla de exportación en tres pasos: elegir, descargar CSV + fotos, importar y marcar como cargados.
-import { listaVisible, guardarProducto } from './store.js';
+import appConfig from '../app-config.js';
+import * as remote from './remote.js';
+import { listaVisible, guardarProducto, obtener, bytesFoto } from './store.js';
 import { normSku, operador } from './config.js';
-import { revisar, skusRepetidos, construirCSV, csvABytes, construirInterno, construirZipFotos, slugDe } from './exportar.js';
+import { revisar, skusRepetidos, construirCSV, csvABytes, construirInterno, construirZipFotos, slugDe, nombreFoto } from './exportar.js';
 import { icono } from './iconos.js';
 import { esc, $, $$, descargar, toast } from './util.js';
 
@@ -38,6 +40,7 @@ export async function vistaExportar(raiz, ctx) {
 
       <div class="col-der">
         <section class="panel paso" id="acciones"></section>
+        <section class="panel paso" id="panel-tn" hidden></section>
         <section class="panel paso">
           <div>
             <h3 class="paso-t"><span class="nro" aria-hidden="true">3</span>Importá en Tienda Nube</h3>
@@ -120,4 +123,100 @@ export async function vistaExportar(raiz, ctx) {
   $('#sel-todos').onclick = () => { elegidos.clear(); todos.filter((p) => !bloqueado(p) && p.estado !== 'cargado').forEach((p) => elegidos.add(p.id)); pintarItems(); };
   $('#sel-nada').onclick = () => { elegidos.clear(); pintarItems(); };
   pintarItems();
+  iniciarFotosTN(todos);
+}
+
+// ---------- Subir fotos directo a Tienda Nube (por SKU, a productos que ya existen en la tienda) ----------
+const aBase64 = (blob) => new Promise((ok, mal) => {
+  const r = new FileReader();
+  r.onload = () => ok(String(r.result).split(',')[1]);
+  r.onerror = () => mal(r.error || new Error('No se pudo leer la foto'));
+  r.readAsDataURL(blob);
+});
+const tnElegidos = new Set();
+
+async function iniciarFotosTN(todos) {
+  const tienda = String(appConfig.tiendanube?.tienda || '');
+  const panel = $('#panel-tn');
+  if (!tienda || !remote.configurado() || !(await remote.sesion())) return; // hace falta el login con Supabase
+  panel.hidden = false;
+
+  // fotos de un producto que todavía no se subieron a ESTA tienda
+  const pendientes = (p) => (p.fotos || []).filter((f) => !(p.tn?.tienda === tienda && (p.tn.subidas || []).includes(f.id)));
+  const lista = todos.filter((p) => p.sku && (p.fotos || []).length);
+  for (const p of lista) if (pendientes(p).length) tnElegidos.add(p.id);
+  for (const id of [...tnElegidos]) if (!lista.find((p) => p.id === id)) tnElegidos.delete(id);
+
+  function pintar() {
+    const hay = lista.filter((p) => tnElegidos.has(p.id)).length;
+    panel.innerHTML = `
+      <div>
+        <h3 class="paso-t"><span class="nro" aria-hidden="true">＋</span>Subir fotos directo a Tienda Nube</h3>
+        <p class="ayuda">Busca cada producto por su SKU en la tienda y le agrega las fotos. No cambia precios, nombres ni descripciones. Tienda <span class="num">${esc(tienda)}</span>.</p>
+        <div class="items" id="tn-items">${lista.length ? lista.map((p) => {
+          const n = pendientes(p).length;
+          return `<label class="item"><input type="checkbox" data-id="${p.id}" ${tnElegidos.has(p.id) ? 'checked' : ''}>
+            <div style="min-width:0"><span class="sku num">${esc(normSku(p.sku))}</span> <span class="estado ${n ? 'e-borrador' : 'e-cargado'}">${n ? `${n} para subir` : 'Subidas'}</span>
+            <div>${esc(p.nombre || 'Sin nombre')}</div></div></label>`;
+        }).join('') : '<p class="ayuda" style="margin:0">Todavía no hay productos con SKU y fotos.</p>'}</div>
+        <label class="ayuda" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="tn-forzar"> Agregar aunque el producto ya tenga fotos en la tienda</label>
+        <div class="fila-botones col"><button class="btn primario" id="b-tn" ${hay ? '' : 'disabled'}>${icono('imagen', 20)}Subir fotos de ${hay} producto${hay === 1 ? '' : 's'}</button></div>
+        <div id="tn-prog" class="progreso" hidden><div class="barra"><i id="tn-barra"></i></div><span id="tn-txt"></span></div>
+        <ul class="ayuda" id="tn-res" style="padding-left:18px;margin:0"></ul>
+      </div>`;
+    $$('#tn-items input').forEach((c) => (c.onchange = () => { c.checked ? tnElegidos.add(c.dataset.id) : tnElegidos.delete(c.dataset.id); pintar(); }));
+    $('#b-tn') && ($('#b-tn').onclick = subir);
+  }
+
+  async function subir() {
+    const forzar = $('#tn-forzar').checked;
+    const ids = lista.filter((p) => tnElegidos.has(p.id)).map((p) => p.id);
+    const total = lista.filter((p) => tnElegidos.has(p.id)).reduce((a, p) => a + pendientes(p).length, 0);
+    $('#b-tn').disabled = true; $('#tn-prog').hidden = false;
+    const res = $('#tn-res'); res.innerHTML = '';
+    const linea = (txt, mal) => { const li = document.createElement('li'); li.textContent = txt; if (mal) li.className = 'rojo'; res.appendChild(li); };
+    let hechas = 0, productosOk = 0;
+    const avance = () => { $('#tn-barra').style.width = Math.round((hechas / Math.max(total, 1)) * 100) + '%'; $('#tn-txt').textContent = `Subiendo fotos: ${hechas} de ${total}`; };
+    avance();
+
+    for (const id of ids) {
+      let p = await obtener(id);
+      if (!p) continue;
+      const etiqueta = normSku(p.sku);
+      try {
+        const pend = pendientes(p).length;
+        if (!pend) { linea(`${etiqueta}: ya estaba subido`); productosOk++; continue; }
+        const enTienda = await remote.tiendaNube('buscar', { tienda, sku: etiqueta });
+        if (!enTienda.existe) { linea(`${etiqueta}: no está en la tienda, revisá el SKU. No se subió nada.`, true); hechas += pend; avance(); continue; }
+        const yaSubimosAlgo = p.tn?.tienda === tienda && (p.tn.subidas || []).length;
+        if (enTienda.fotos.length && !forzar && !yaSubimosAlgo) {
+          linea(`${etiqueta}: ya tiene ${enTienda.fotos.length} foto${enTienda.fotos.length === 1 ? '' : 's'} en la tienda y no se tocó. Tildá «Agregar aunque ya tenga fotos» si querés sumarlas.`, true);
+          hechas += pend; avance(); continue;
+        }
+        let posicion = enTienda.fotos.length, subidas = 0;
+        for (;;) {
+          // se vuelve a leer el producto antes de cada foto: tras guardarlo, en iPhone los Blob de la copia vieja pueden quedar sin archivo
+          p = await obtener(id);
+          const indice = (p.fotos || []).findIndex((f) => !(p.tn?.tienda === tienda && (p.tn.subidas || []).includes(f.id)));
+          if (indice < 0) break;
+          const f = p.fotos[indice];
+          const base64 = await aBase64(await bytesFoto(f));
+          await remote.tiendaNube('subir-foto', { tienda, producto: enTienda.id, nombre: nombreFoto(p, indice, f.ext || 'jpg'), base64, posicion: ++posicion });
+          p.tn = { tienda, subidas: [...(p.tn?.tienda === tienda ? p.tn.subidas : []), f.id], fecha: new Date().toISOString() };
+          await guardarProducto(p, operador());
+          subidas++; hechas++; avance();
+        }
+        linea(`${etiqueta}: ${subidas} foto${subidas === 1 ? '' : 's'} subida${subidas === 1 ? '' : 's'} a «${enTienda.nombre}»`);
+        productosOk++;
+      } catch (e) { linea(`${etiqueta}: ${e.message}`, true); }
+    }
+    $('#tn-prog').hidden = true;
+    toast(`Listo: ${productosOk} de ${ids.length} producto${ids.length === 1 ? '' : 's'} con fotos en Tienda Nube`, productosOk === ids.length ? '' : 'error');
+    const nuevos = await listaVisible();
+    lista.splice(0, lista.length, ...nuevos.filter((q) => q.sku && (q.fotos || []).length).sort((a, b) => normSku(a.sku).localeCompare(normSku(b.sku), 'es', { numeric: true })));
+    const resultados = res.innerHTML;
+    pintar(); $('#tn-res').innerHTML = resultados;
+  }
+
+  pintar();
 }

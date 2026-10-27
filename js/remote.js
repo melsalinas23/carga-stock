@@ -76,6 +76,18 @@ export async function borrarFotos(paths) {
 
 export const urlFoto = (path) => client.storage.from('fotos').getPublicUrl(path).data.publicUrl;
 
+// Puente con la API de Tienda Nube (función `tiendanube` de Supabase): el permiso de la tienda vive solo en el servidor.
+export async function tiendaNube(accion, datos = {}) {
+  const { data, error } = await client.functions.invoke('tiendanube', { body: { accion, ...datos } });
+  if (error) {
+    let msg = error.message;
+    try { msg = (await error.context.json()).error || msg; } catch { /* sin detalle del servidor */ }
+    throw new Error(msg);
+  }
+  if (!data?.ok) throw new Error(data?.error || 'Tienda Nube no respondió bien');
+  return data;
+}
+
 export async function traerConfig() {
   const { data, error } = await client.from('config').select('*').eq('negocio', negocio).maybeSingle();
   if (error) throw error;
