@@ -100,9 +100,10 @@ export async function vistaExportar(raiz, ctx) {
       const grupo = conFotos.slice(+b.dataset.parte * TAM_ZIP, (+b.dataset.parte + 1) * TAM_ZIP);
       const prog = $('#prog'); prog.hidden = false;
       try {
-        const zip = await construirZipFotos(grupo, (n, t) => { $('#barra').style.width = Math.round((n / t) * 100) + '%'; $('#txt').textContent = `Armando el ZIP: ${n} de ${t} fotos`; });
-        descargar(zip, `fotos-productos-${sello()}-parte${+b.dataset.parte + 1}.zip`);
-        toast('ZIP de fotos descargado');
+        const { blob, ok, total, fallas } = await construirZipFotos(grupo, (n, t) => { $('#barra').style.width = Math.round((n / t) * 100) + '%'; $('#txt').textContent = `Armando el ZIP: ${n} de ${t} fotos`; });
+        descargar(blob, `fotos-productos-${sello()}-parte${+b.dataset.parte + 1}.zip`);
+        if (fallas.length) toast(`ZIP con ${ok} de ${total} fotos. No se pudieron leer: ${fallas.slice(0, 4).join(', ')}${fallas.length > 4 ? ` y ${fallas.length - 4} más` : ''}. Volvé a sacar esas fotos.`, 'error');
+        else toast('ZIP de fotos descargado');
       } catch (e) { toast('No se pudo armar el ZIP: ' + e.message, 'error'); }
       prog.hidden = true;
     }));

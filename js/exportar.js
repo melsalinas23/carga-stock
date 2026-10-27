@@ -1,7 +1,7 @@
 // Exportación: CSV de carga masiva de Tienda Nube (Latin-1, separador ";"), ZIP de fotos y copia de seguridad.
 import { cfg, normSku, principalDe } from './config.js';
 import { slugify, fmtPrecioCSV, fmtPesoCSV, fmtMedidaCSV, esc, aLatin1, limpiarTexto, cargarScript } from './util.js';
-import { bytesFoto, listaVisible } from './store.js';
+import { bytesFoto, listaVisible, obtener } from './store.js';
 import { extDe } from './imagen.js';
 
 export const COLUMNAS = ['Identificador de URL', 'Nombre', 'Categorías', 'Nombre de propiedad 1', 'Valor de propiedad 1', 'Nombre de propiedad 2', 'Valor de propiedad 2', 'Nombre de propiedad 3', 'Valor de propiedad 3', 'Precio', 'Precio promocional', 'Peso (kg)', 'Alto (cm)', 'Ancho (cm)', 'Profundidad (cm)', 'Stock', 'SKU', 'Código de barras', 'Mostrar en tienda', 'Envío sin cargo', 'Descripción', 'Tags', 'Título para SEO', 'Descripción para SEO', 'Marca', 'Producto Físico', 'MPN (Número de pieza del fabricante)', 'Sexo', 'Rango de edad', 'Costo', 'Visibilidad'];
@@ -96,18 +96,38 @@ export const nombreFoto = (p, i, blobOExt) => {
   return i === 0 ? `${base}.${ext}` : `${base}_${i + 1}.${ext}`;
 };
 
+// Los bytes se leen en el momento (no se le pasa el Blob a JSZip): en iPhone un Blob guardado en IndexedDB
+// puede quedar sin archivo ("The object can not be found here") y así se sabe cuál foto falló.
+async function leerBytes(blob) {
+  try { return new Uint8Array(await blob.arrayBuffer()); } catch { /* Safari viejo o Blob sin arrayBuffer */ }
+  return new Uint8Array(await new Promise((ok, mal) => {
+    const r = new FileReader();
+    r.onload = () => ok(r.result); r.onerror = () => mal(r.error || new Error('No se pudo leer la foto'));
+    r.readAsArrayBuffer(blob);
+  }));
+}
+
+// Devuelve { blob, ok, total, fallas }: una foto ilegible no tira abajo el ZIP, queda anotada en `fallas`.
 export async function construirZipFotos(productos, alProgreso) {
   await cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
   const zip = new window.JSZip();
-  let n = 0, total = productos.reduce((a, p) => a + (p.fotos?.length || 0), 0);
-  for (const p of productos) {
+  let n = 0, ok = 0;
+  const total = productos.reduce((a, p) => a + (p.fotos?.length || 0), 0);
+  const fallas = [];
+  for (const viejo of productos) {
+    // Se vuelve a leer cada producto: tras guardarlo (p. ej. al fijar el slug del CSV) los Blob de la copia vieja pueden dejar de existir.
+    const p = (await obtener(viejo.id).catch(() => null)) || viejo;
     for (let i = 0; i < (p.fotos || []).length; i++) {
-      const b = await bytesFoto(p.fotos[i]);
-      zip.file(nombreFoto(p, i, b), b);
+      try {
+        const b = await bytesFoto(p.fotos[i]);
+        zip.file(nombreFoto(p, i, b), await leerBytes(b));
+        ok++;
+      } catch { fallas.push(`${normSku(p.sku) || 'sin SKU'} (foto ${i + 1})`); }
       alProgreso?.(++n, total);
     }
   }
-  return zip.generateAsync({ type: 'blob', compression: 'STORE' });
+  if (!ok) throw new Error('el celular no puede leer las fotos guardadas. Abrí cada producto y volvé a sacar la foto');
+  return { blob: await zip.generateAsync({ type: 'blob', compression: 'STORE' }), ok, total, fallas };
 }
 
 // ---------- Copia de seguridad (todo el contenido de este teléfono) ----------

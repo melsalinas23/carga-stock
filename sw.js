@@ -3,7 +3,7 @@
 //  2) guarda librerías y tipografías externas la primera vez que se usan,
 //  3) agrega los encabezados que permiten usar varios núcleos del procesador (quitar fondo mucho más rápido)
 //     aunque el sitio esté en un hosting que no permite configurarlos.
-const VERSION = 'v10';
+const VERSION = 'v11';
 const APP = 'app-' + VERSION;
 const LIBS = 'libs-v1';
 const ARCHIVOS = ['./', 'index.html', 'styles.css', 'manifest.webmanifest', 'app-config.js', 'config/base.json',
