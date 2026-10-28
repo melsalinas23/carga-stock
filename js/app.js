@@ -128,7 +128,6 @@ async function arrancar() {
     if (!sesion) { store.eventos.dispatchEvent(new CustomEvent('sync', { detail: {} })); ir = '#/login'; }
     else { try { await ctx.alIniciarSesion(); } catch (e) { console.error(e); toast('No se pudo sincronizar al entrar: ' + (e.message || e), 'error'); } }
   }
-  $('#negocio').textContent = cfg.negocio_nombre || '';
   await store.contarPendientes();
   pintarSync();
   window.addEventListener('hashchange', () => navegar());
