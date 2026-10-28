@@ -13,6 +13,11 @@ const COLA = 'fotos_rapidas_cola';      // [{ id, sku, tienda, nombre, productoI
 const HISTORIAL = 'fotos_rapidas_hoy';  // [{ sku, nombre, n, tienda, ts }]
 const hora = (ts) => new Date(ts).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 
+// «Mostrar el producto al subir las fotos»: se recuerda la última elección en este equipo (por defecto, sí)
+const PREF_MOSTRAR = 'fotos_mostrar';
+const prefMostrar = () => { try { return localStorage.getItem(PREF_MOSTRAR) !== 'no'; } catch { return true; } };
+const fijarPrefMostrar = (v) => { try { localStorage.setItem(PREF_MOSTRAR, v ? 'si' : 'no'); } catch { /* sin almacenamiento */ } };
+
 export async function vistaFotos(raiz, ctx) {
   if (!tiendas().length || !remote.configurado() || !(await remote.sesion())) {
     raiz.innerHTML = `<div class="vacio"><p><b>Esta función necesita iniciar sesión.</b></p><p>Entrá con tu mail para subir fotos directo a Tienda Nube.</p><a class="btn primario" href="#/login">Iniciar sesión</a></div>`;
@@ -53,7 +58,7 @@ export async function vistaFotos(raiz, ctx) {
               <li><b class="num">${esc(x.sku)}</b> · ${esc(x.nombre || '')} · ${x.fotos.length} foto${x.fotos.length === 1 ? '' : 's'}<br><span class="rojo">${esc(x.error || '')}</span>
               <div class="fila-botones" style="margin:6px 0 0"><button class="btn chico" data-reintentar="${x.id}">Reintentar</button><button class="btn chico fantasma" data-descartar="${x.id}">Descartar</button></div></li>`).join('')}</ul></div></section>` : ''}
           <section class="panel paso"><div><h3 class="paso-t">Subidas de hoy</h3>
-            ${historial.length ? `<ul class="ayuda" style="padding-left:18px;margin:0">${historial.map((h) => `<li><b class="num">${esc(h.sku)}</b> · ${esc(h.nombre || '')} · ${h.n} foto${h.n === 1 ? '' : 's'} · ${hora(h.ts)}</li>`).join('')}</ul>` : '<p class="ayuda" style="margin:0">Todavía no subiste fotos hoy.</p>'}
+            ${historial.length ? `<ul class="ayuda" style="padding-left:18px;margin:0">${historial.map((h) => `<li><b class="num">${esc(h.sku)}</b> · ${esc(h.nombre || '')} · ${h.n} foto${h.n === 1 ? '' : 's'}${h.visible ? ' · ahora visible' : ''} · ${hora(h.ts)}</li>`).join('')}</ul>` : '<p class="ayuda" style="margin:0">Todavía no subiste fotos hoy.</p>'}
           </div></section>
         </div>
       </div>`;
@@ -85,7 +90,8 @@ export async function vistaFotos(raiz, ctx) {
         <label class="btn">${icono('imagen', 22)}<span>Galería</span><input id="in-gal" type="file" accept="image/*" multiple ${ocupado ? 'disabled' : ''}></label>
       </div>
       ${item.enTienda ? `<label class="ayuda" style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="c-reemp" ${item.reemplazar ? 'checked' : ''}> Reemplazar las ${item.enTienda} foto${item.enTienda === 1 ? '' : 's'} que ya tiene</label>` : ''}
-      <div class="fila-botones col" style="margin-top:12px"><button class="btn primario grande" id="b-subir" ${n && !ocupado ? '' : 'disabled'}>${icono('check', 20)}${ocupado ? 'Subiendo…' : `Subir ${n} foto${n === 1 ? '' : 's'} a Tienda Nube`}</button></div>`;
+      ${item.publicado ? '' : `<label class="ayuda" style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="c-mostrar" ${item.mostrar ? 'checked' : ''}> Mostrar el producto en la tienda al subir las fotos</label>`}
+      <div class="fila-botones col" style="margin-top:12px"><button class="btn primario grande" id="b-subir" ${n && !ocupado ? '' : 'disabled'}>${icono('check', 20)}${ocupado ? 'Subiendo…' : `Subir ${n} foto${n === 1 ? '' : 's'}${!item.publicado && item.mostrar ? ' y mostrar el producto' : ''}`}</button></div>`;
   }
 
   function enlazar() {
@@ -98,6 +104,7 @@ export async function vistaFotos(raiz, ctx) {
     $('#in-gal') && ($('#in-gal').onchange = (e) => { const a = [...e.target.files]; e.target.value = ''; agregar(a); });
     $$('[data-quitar]').forEach((b) => (b.onclick = async () => { item.fotos.splice(+b.dataset.quitar, 1); await guardarCola(); pintar(); }));
     $('#c-reemp') && ($('#c-reemp').onchange = async (e) => { item.reemplazar = e.target.checked; await guardarCola(); });
+    $('#c-mostrar') && ($('#c-mostrar').onchange = async (e) => { item.mostrar = e.target.checked; fijarPrefMostrar(item.mostrar); await guardarCola(); pintar(); });
     $('#b-subir') && ($('#b-subir').onclick = () => subir(item));
     $$('[data-reintentar]').forEach((b) => (b.onclick = () => subir(cola.find((x) => x.id === b.dataset.reintentar))));
     $$('[data-descartar]').forEach((b) => (b.onclick = async () => {
@@ -114,7 +121,7 @@ export async function vistaFotos(raiz, ctx) {
       const r = await remote.tiendaNube('buscar', { tienda: actual.id, sku });
       if (!r.existe) aviso = { mal: true, txt: `No hay ningún producto con el SKU ${sku} en «${actual.nombre}». Revisá el número.` };
       else {
-        item = { id: uid(), sku, tienda: actual.id, nombre: r.nombre, productoId: r.id, enTienda: r.fotos.length, publicado: r.publicado, reemplazar: false, fotos: [], estado: 'en-curso', error: '' };
+        item = { id: uid(), sku, tienda: actual.id, nombre: r.nombre, productoId: r.id, enTienda: r.fotos.length, publicado: r.publicado, mostrar: !r.publicado && prefMostrar(), reemplazar: false, fotos: [], estado: 'en-curso', error: '' };
         cola.push(item); await guardarCola(); aviso = null;
       }
     } catch (e) { aviso = { mal: true, txt: e.message }; }
@@ -153,12 +160,21 @@ export async function vistaFotos(raiz, ctx) {
         await remote.tiendaNube('subir-foto', { tienda: it.tienda, producto: enT.id, nombre: `${it.sku}${base ? `_${base + 1}` : ''}.${c.ext}`, base64: c.base64, posicion: ++posicion });
         it.fotos = it.fotos.filter((f) => f.id !== c.id);
       }
+      // las fotos ya están en la tienda: si el producto estaba oculto y se pidió mostrarlo, se publica ahora
+      let visible = false, sinMostrar = '';
+      if (it.mostrar && !enT.publicado && cargas.length) {
+        try { await remote.tiendaNube('visibilidad', { tienda: it.tienda, producto: enT.id, publicado: true }); visible = true; }
+        catch (e) { sinMostrar = e.message || String(e); }
+      }
       cola = cola.filter((x) => x.id !== it.id); await guardarCola();
-      historial.unshift({ sku: it.sku, nombre: enT.nombre, n: cargas.length, tienda: it.tienda, ts: Date.now() });
+      historial.unshift({ sku: it.sku, nombre: enT.nombre, n: cargas.length, tienda: it.tienda, ts: Date.now(), visible });
       await setMeta(HISTORIAL, historial.slice(0, 100));
       if (item === it) item = null;
-      aviso = { txt: `Listo: ${cargas.length} foto${cargas.length === 1 ? '' : 's'} en «${enT.nombre}».` };
-      toast(aviso.txt);
+      const fotosTxt = `${cargas.length} foto${cargas.length === 1 ? '' : 's'}`;
+      aviso = sinMostrar
+        ? { mal: true, txt: `Se subieron ${fotosTxt} a «${enT.nombre}», pero no se pudo mostrar el producto (${sinMostrar}). Mostralo desde el administrador de Tienda Nube.` }
+        : { txt: `Listo: ${fotosTxt} en «${enT.nombre}»${visible ? ' y ahora está visible en la tienda' : ''}.` };
+      toast(aviso.txt, sinMostrar ? 'error' : '');
     } catch (e) {
       it.estado = 'error'; it.error = e.message || String(e);
       await guardarCola();
