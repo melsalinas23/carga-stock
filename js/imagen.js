@@ -7,9 +7,20 @@ let modFondo = null;
 const crearCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); return c; };
 export const aBlob = (canvas, tipo, q) => new Promise((ok) => canvas.toBlob(ok, tipo, q));
 
+// Las fotos del iPhone vienen en HEIC. Safari las abre solo; Chrome, Brave y Firefox no: se convierten a JPEG en el propio equipo.
+const CDN_HEIC = 'https://cdn.jsdelivr.net/npm/heic-to@1.6.6/+esm';
+let modHeic = null;
+export const esHeic = (f) => /^image\/hei[cf]/i.test(f.type || '') || /\.(heic|heif)$/i.test(f.name || '');
+export const precargarHeic = () => { modHeic ??= import(CDN_HEIC).catch((e) => { modHeic = null; throw e; }); return modHeic; };
+async function heicAJpeg(archivo) {
+  const m = await precargarHeic();
+  return m.heicTo({ blob: archivo, type: 'image/jpeg', quality: 0.92 });
+}
+
 async function cargarBitmap(archivo) {
   try { return await createImageBitmap(archivo, { imageOrientation: 'from-image' }); }
-  catch {
+  catch (e) {
+    if (esHeic(archivo)) return createImageBitmap(await heicAJpeg(archivo));
     const url = URL.createObjectURL(archivo);
     const img = new Image(); img.src = url; await img.decode();
     return img;

@@ -5,7 +5,7 @@ import { cfg } from './config.js';
 export const MODOS_FOTO = [
   { id: 'quitar_fondo', titulo: 'Quitar el fondo', ayuda: 'El producto se recorta y queda centrado sobre fondo blanco, igual que las fotos ya subidas. Para fotos sacadas con un celular. Tarda unos segundos por foto.' },
   { id: 'ajustar', titulo: 'Solo ajustar', ayuda: 'La foto completa queda en un cuadrado del mismo tamaño que las demás, con luz y nitidez mejoradas, sin tocar el fondo. Para fotos con fondo prolijo.' },
-  { id: 'tal_cual', titulo: 'Subir tal cual', ayuda: 'No se modifica la foto (solo se achica si pesa más de 4 MB). Para fotos ya editadas por un profesional.' },
+  { id: 'tal_cual', titulo: 'Subir tal cual', ayuda: 'No se modifica la foto (solo se achica si pesa más de 4 MB; las HEIC del iPhone se convierten). Para fotos ya editadas por un profesional.' },
 ];
 const TAL_CUAL_MAX = 4 * 1024 * 1024;
 

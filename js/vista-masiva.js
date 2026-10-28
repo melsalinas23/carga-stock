@@ -4,17 +4,16 @@
 import * as remote from './remote.js';
 import { normSku, cfg, operador } from './config.js';
 import { productoNuevo, guardarProducto, listaVisible } from './store.js';
-import { extDe } from './imagen.js';
+import { extDe, esHeic, precargarHeic } from './imagen.js';
 import { procesarFoto, MODOS_FOTO } from './procesar.js';
 import { icono } from './iconos.js';
 import { $, $$, esc, toast, uid, aBase64, cargarScript } from './util.js';
 import { tiendas, tiendaActual, fijarTienda, tiendasConectadas, selectorTiendaHtml } from './tn.js';
 
 const JSZIP = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-const IMG = /\.(jpe?g|png|webp|gif)$/i;
-const HEIC = /\.(heic|heif)$/i;
+const IMG = /\.(jpe?g|png|webp|gif|heic|heif)$/i;
 const IGNORAR = /(^|\/)(__MACOSX|\.DS_Store|Thumbs\.db)/i;
-const TIPOS = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' };
+const TIPOS = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', heic: 'image/heic', heif: 'image/heif' };
 const PREF_MODO = 'masiva_modo';
 const PREF_MOSTRAR = 'fotos_mostrar';
 
@@ -27,7 +26,7 @@ const OPCIONES_FILA = {
 
 // "00000223_2.jpg" → { sku: '00000223', n: 2 } · "00000223.jpg" → n = 1 · también "00000223-2", "00000223 (2)" y "00000223(2)"
 export function leerNombre(nombre) {
-  const m = String(nombre).split('/').pop().match(/^(.+)\.(jpe?g|png|webp|gif)$/i);
+  const m = String(nombre).split('/').pop().match(/^(.+)\.(jpe?g|png|webp|gif|heic|heif)$/i);
   if (!m) return null;
   const stem = m[1].trim();
   const c = stem.match(/^(.+?)(?:[\s_-]+\(?(\d{1,2})\)?|\s*\((\d{1,2})\))$/);
@@ -44,7 +43,6 @@ async function expandirZip(zipFile) {
   for (const e of Object.values(zip.files)) {
     if (e.dir || IGNORAR.test(e.name)) continue;
     const base = e.name.split('/').pop();
-    if (HEIC.test(base)) { salida.push({ ignorado: e.name, motivo: 'HEIC: pasala a JPG' }); continue; }
     if (!IMG.test(base)) { salida.push({ ignorado: e.name, motivo: 'no es una foto compatible' }); continue; }
     salida.push({ archivo: new File([await e.async('blob')], base, { type: tipoDe(base) }), ruta: e.name });
   }
@@ -57,7 +55,6 @@ async function reunir(archivos) {
     const ruta = f.webkitRelativePath || f.name;
     if (IGNORAR.test(ruta)) continue;
     if (/\.zip$/i.test(f.name)) salida.push(...await expandirZip(f));
-    else if (HEIC.test(f.name)) salida.push({ ignorado: ruta, motivo: 'HEIC: pasala a JPG' });
     else if (IMG.test(f.name)) salida.push({ archivo: f, ruta });
     else salida.push({ ignorado: ruta, motivo: 'no es una foto compatible' });
   }
@@ -130,7 +127,7 @@ export async function vistaMasiva(raiz, ctx) {
       <section class="panel paso"><div>
         ${selectorTiendaHtml(actual, conectadas)}
         <h3 class="paso-t"><span class="nro" aria-hidden="true">1</span>Elegí las fotos</h3>
-        <p class="ayuda">Los archivos tienen que llamarse como el SKU: <code>00000223.jpg</code> es la principal y <code>00000223_2.jpg</code>, <code>00000223_3.jpg</code>… las siguientes. Sirve una carpeta, un ZIP o fotos sueltas.</p>
+        <p class="ayuda">Los archivos tienen que llamarse como el SKU: <code>00000223.jpg</code> es la principal y <code>00000223_2.jpg</code>, <code>00000223_3.jpg</code>… las siguientes. Sirve una carpeta, un ZIP o fotos sueltas. Las fotos del iPhone (HEIC) se convierten solas.</p>
         <div id="m-soltar" class="zona-soltar" tabindex="0">${icono('imagen', 36)}<b>Soltá acá las fotos, la carpeta o el ZIP</b><span>o elegilos con los botones</span></div>
         <div class="btns-foto" style="grid-template-columns:repeat(3,1fr)">
           <label class="btn">${icono('imagen', 20)}<span>Fotos</span><input id="m-fotos" type="file" accept="image/*" multiple></label>
@@ -159,6 +156,7 @@ export async function vistaMasiva(raiz, ctx) {
       try {
         const r = agrupar(candidatos);
         grupos = r.grupos; ignorados = r.ignorados;
+        if (candidatos.some((c) => c.archivo && esHeic(c.archivo))) precargarHeic().catch(() => { /* se vuelve a intentar al procesar */ });
       } catch (e) { toast('No se pudieron leer los archivos: ' + (e.message || e), 'error'); }
       leyendo = false; pintar();
     };
