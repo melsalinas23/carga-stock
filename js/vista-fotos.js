@@ -71,7 +71,8 @@ export async function vistaFotos(raiz, ctx) {
         <label class="campo" style="margin:0 0 10px"><span>SKU</span><input id="i-sku" type="text" inputmode="text" autocapitalize="characters" enterkeyhint="search" placeholder="Escribí el SKU del producto" ${ocupado ? 'disabled' : ''}></label>
         <div class="fila-botones col"><button class="btn primario" type="submit" id="b-buscar" ${ocupado ? 'disabled' : ''}>${icono('buscar', 20)}Buscar producto</button></div>
       </form>
-      <p class="ayuda" style="margin:10px 0 0">La app busca el producto en la tienda y te muestra su nombre para que confirmes que es el correcto.</p>`;
+      <p class="ayuda" style="margin:10px 0 0">La app busca el producto en la tienda y te muestra su nombre para que confirmes que es el correcto.</p>
+      <p class="ayuda" style="margin:14px 0 0">¿Tenés muchas fotos con el SKU en el nombre del archivo? <a href="#/masiva"><b>Carga masiva por nombre de archivo</b></a></p>`;
   }
 
   function bloqueProducto() {
