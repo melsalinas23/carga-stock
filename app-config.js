@@ -8,5 +8,11 @@ export default {
   // Si más arriba se completa Supabase, pasa a mandar el login por persona y esto se ignora.
   acceso: 'config/acceso.json',
   // Tienda de Tienda Nube a la que se suben las fotos por SKU (hace falta el login con Supabase). Vacío = panel oculto.
-  tiendanube: { tienda: '8437403' },  // 8437403 = tienda de prueba · 7212308 = Diagonal Herrajes
+  tiendanube: {
+    tienda: '8437403',  // la que se usa si en este equipo no se eligió otra
+    tiendas: [
+      { id: '8437403', nombre: 'Tienda de prueba', real: false },
+      { id: '7212308', nombre: 'Diagonal Herrajes', real: true },
+    ],
+  },
 };

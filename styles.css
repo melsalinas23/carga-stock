@@ -101,7 +101,7 @@ em { font-family: var(--serif); font-style: italic; font-weight: 700; letter-spa
 
 #tabs {
   position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; height: calc(var(--alto-nav) + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom); display: grid; grid-template-columns: repeat(4, 1fr);
+  padding-bottom: env(safe-area-inset-bottom); display: grid; grid-template-columns: repeat(5, 1fr);
   background: var(--negro); border-top: 1px solid #2a2433;
 }
 #tabs .nav-logo, #tabs .nav-sep { display: none; }

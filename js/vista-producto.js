@@ -329,7 +329,7 @@ export async function vistaProducto(raiz, ctx, id) {
 }
 
 // ===== Editor de foto (hoja inferior): original contra resultado, con tres modos =====
-function editorFoto(fuente, inicial = {}) {
+export function editorFoto(fuente, inicial = {}) {
   return new Promise((resolver) => {
     const fc = cfg.foto || {};
     let modo = inicial.modo && ['quitar_fondo', 'ajustar', 'original'].includes(inicial.modo) ? inicial.modo : (fc.modo || 'quitar_fondo');

@@ -5,7 +5,14 @@ export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&a
 export const $ = (sel, el = document) => el.querySelector(sel);
 export const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 export const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
-export const sinTildes = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '');
+// Contenido de un Blob en base64 (sin el prefijo data:), listo para mandar a la API
+export const aBase64 = (blob) => new Promise((ok, mal) => {
+  const r = new FileReader();
+  r.onload = () => ok(String(r.result).split(',')[1]);
+  r.onerror = () => mal(r.error || new Error('No se pudo leer la foto'));
+  r.readAsDataURL(blob);
+});
+export const sinTildes =(s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '');
 export const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export function debounce(fn, ms = 300) {

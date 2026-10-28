@@ -1,11 +1,11 @@
 // Pantalla de exportación en tres pasos: elegir, descargar CSV + fotos, importar y marcar como cargados.
-import appConfig from '../app-config.js';
 import * as remote from './remote.js';
+import { tiendas, tiendaActual, fijarTienda, tiendasConectadas, selectorTiendaHtml } from './tn.js';
 import { listaVisible, guardarProducto, obtener, bytesFoto } from './store.js';
 import { normSku, operador } from './config.js';
 import { revisar, skusRepetidos, construirCSV, csvABytes, construirInterno, construirZipFotos, slugDe, nombreFoto, textoAHtml } from './exportar.js';
 import { icono } from './iconos.js';
-import { esc, $, $$, descargar, toast } from './util.js';
+import { esc, $, $$, descargar, toast, aBase64 } from './util.js';
 
 const TAM_ZIP = 40; // productos por ZIP de fotos (para no saturar el celular)
 const sello = () => new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '').replace(/^(\d{8})/, '$1-');
@@ -127,12 +127,6 @@ export async function vistaExportar(raiz, ctx) {
 }
 
 // ---------- Enviar a Tienda Nube (datos + fotos, por SKU) ----------
-const aBase64 = (blob) => new Promise((ok, mal) => {
-  const r = new FileReader();
-  r.onload = () => ok(String(r.result).split(',')[1]);
-  r.onerror = () => mal(r.error || new Error('No se pudo leer la foto'));
-  r.readAsDataURL(blob);
-});
 const tnElegidos = new Set();
 const numero = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? null : Number(v));
 const rutaCat = (c) => String(c || '').split('>').map((x) => x.trim()).filter(Boolean);
@@ -150,9 +144,12 @@ const cargaTN = (p) => ({
 const TITULO_PLAN = { crear: 'Se crea, oculto', actualizar: 'Se actualiza', 'sin-cambios': 'Datos sin cambios', 'no-se-puede': 'No se puede crear', 'solo-fotos': 'Solo fotos', 'no-existe': 'No está en la tienda' };
 
 async function iniciarTN(todos) {
-  const tienda = String(appConfig.tiendanube?.tienda || '');
   const panel = $('#panel-tn');
-  if (!tienda || !remote.configurado() || !(await remote.sesion())) return; // hace falta el login con Supabase
+  if (!tiendas().length || !remote.configurado() || !(await remote.sesion())) return; // hace falta el login con Supabase
+  let actual = tiendaActual();
+  let tienda = actual?.id || '';
+  let conectadas = [];
+  try { conectadas = await tiendasConectadas(); } catch { /* el motivo aparece al revisar o enviar */ }
   panel.hidden = false;
 
   const subidas = (p) => (p.tn?.tienda === tienda ? p.tn.subidas || [] : []);
@@ -172,7 +169,8 @@ async function iniciarTN(todos) {
     panel.innerHTML = `
       <div>
         <h3 class="paso-t"><span class="nro" aria-hidden="true">＋</span>Enviar a Tienda Nube</h3>
-        <p class="ayuda">Crea o actualiza cada producto por su SKU y le sube las fotos. Los productos nuevos se crean ocultos y quedan visibles solo si están en estado «Listo» y tienen fotos. Antes de enviar ves qué va a cambiar. Tienda <span class="num">${esc(tienda)}</span>.</p>
+        <p class="ayuda">Crea o actualiza cada producto por su SKU y le sube las fotos. Los productos nuevos se crean ocultos y quedan visibles solo si están en estado «Listo» y tienen fotos. Antes de enviar ves qué va a cambiar.</p>
+        ${selectorTiendaHtml(actual, conectadas)}
         <div class="items" id="tn-items">${lista.length ? lista.map((p) => {
           const n = pendientes(p).length;
           return `<label class="item"><input type="checkbox" data-id="${p.id}" ${tnElegidos.has(p.id) ? 'checked' : ''}>
@@ -189,6 +187,13 @@ async function iniciarTN(todos) {
         <div id="tn-prog" class="progreso" hidden><div class="barra"><i id="tn-barra"></i></div><span id="tn-txt"></span></div>
         <ul class="ayuda" id="tn-res" style="padding-left:18px;margin:8px 0 0">${informe.map(li).join('')}</ul>
       </div>`;
+    const sel = $('#tn-tienda');
+    if (sel) sel.onchange = () => {
+      fijarTienda(sel.value); actual = tiendas().find((t) => t.id === sel.value) || actual; tienda = actual.id;
+      plan = []; informe = []; tnElegidos.clear();
+      for (const p of lista) if (p.estado !== 'cargado' && (pendientes(p).length || p.estado === 'listo')) tnElegidos.add(p.id);
+      pintar();
+    };
     $$('#tn-items input').forEach((c) => (c.onchange = () => { c.checked ? tnElegidos.add(c.dataset.id) : tnElegidos.delete(c.dataset.id); pintar(); }));
     $$('[data-op]', panel).forEach((c) => (c.onchange = () => { op[c.dataset.op] = c.checked; pintar(); }));
     $('#b-tn') && ($('#b-tn').onclick = revisarPlan);
@@ -199,7 +204,7 @@ async function iniciarTN(todos) {
     panel.innerHTML = `
       <div>
         <h3 class="paso-t"><span class="nro" aria-hidden="true">＋</span>Esto es lo que va a pasar</h3>
-        <p class="ayuda">Revisalo antes de enviar. Todavía no se cambió nada en la tienda ${esc(tienda)}.</p>
+        <p class="ayuda">Revisalo antes de enviar. Todavía no se cambió nada en «${esc(actual?.nombre || tienda)}».</p>
         <ul class="ayuda" style="padding-left:18px;margin:0 0 10px;display:grid;gap:10px">${plan.map((e) => `
           <li class="${e.error || e.accion === 'no-se-puede' || e.accion === 'no-existe' ? 'rojo' : ''}"><b class="num">${esc(e.etiqueta)}</b> · ${esc(e.nombre || 'Sin nombre')}<br>
             <b>${e.error ? 'Error' : TITULO_PLAN[e.accion] || e.accion}</b>${e.error ? `: ${esc(e.error)}` : ''}${e.faltan?.length ? `: falta ${esc(e.faltan.join(', '))}` : ''}

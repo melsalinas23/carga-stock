@@ -10,6 +10,7 @@ import { aplicarTema, temaGuardado } from './tema.js';
 import { vistaLista } from './vista-lista.js';
 import { vistaProducto } from './vista-producto.js';
 import { vistaExportar } from './vista-exportar.js';
+import { vistaFotos } from './vista-fotos.js';
 import { vistaAjustes, vistaLogin } from './vista-ajustes.js';
 
 const HOST_LOCAL = ['localhost', '127.0.0.1', '[::1]'];
@@ -30,6 +31,7 @@ const RUTAS = {
   '': { vista: vistaLista, tab: 'lista', titulo: 'Mis <em>productos</em>' },
   nuevo: { vista: (r, c) => vistaProducto(r, c, 'nuevo'), tab: 'nuevo', titulo: 'Nuevo <em>producto</em>' },
   producto: { vista: (r, c, id) => vistaProducto(r, c, id), tab: 'lista', titulo: 'Editar <em>producto</em>' },
+  fotos: { vista: vistaFotos, tab: 'fotos', titulo: 'Fotos <em>rápidas</em>' },
   exportar: { vista: vistaExportar, tab: 'exportar', titulo: 'Exportar a <em>Tienda Nube</em>' },
   ajustes: { vista: vistaAjustes, tab: 'ajustes', titulo: 'Ajustes de la <em>cuenta</em>' },
   login: { vista: vistaLogin, tab: 'ajustes', titulo: 'Iniciar <em>sesión</em>' },
