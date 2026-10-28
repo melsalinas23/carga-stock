@@ -15,6 +15,14 @@ export const aBase64 = (blob) => new Promise((ok, mal) => {
 export const sinTildes =(s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '');
 export const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Copia en memoria los archivos elegidos en un <input type=file> antes de limpiarlo: en el celular, al vaciar el selector
+// el sistema puede borrar los archivos temporales y las fotos 2, 3... ya no se pueden abrir.
+export async function copiarArchivos(lista) {
+  const copias = [];
+  for (const f of lista) copias.push(new File([await f.arrayBuffer()], f.name, { type: f.type || 'image/jpeg', lastModified: f.lastModified }));
+  return copias;
+}
+
 export function debounce(fn, ms = 300) {
   let t;
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };

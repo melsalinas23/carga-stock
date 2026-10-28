@@ -6,7 +6,7 @@ import { revisar } from './exportar.js';
 import { avance, rielHTML, textoFaltan } from './riel.js';
 import { sugerirTextos } from './textos.js';
 import { icono } from './iconos.js';
-import { esc, $, $$, uid, parseNum, toast, abrirModal, cerrarModal } from './util.js';
+import { esc, $, $$, uid, parseNum, toast, abrirModal, cerrarModal, copiarArchivos } from './util.js';
 
 let plantillaNuevo = null; // para "Duplicar como nuevo"
 
@@ -287,8 +287,14 @@ export async function vistaProducto(raiz, ctx, id) {
       marcarSucio(); pintarFotos();
     }
   }
-  $('#in-camara').onchange = async (e) => { const a = [...e.target.files]; e.target.value = ''; await agregarArchivos(a); };
-  $('#in-galeria').onchange = async (e) => { const a = [...e.target.files]; e.target.value = ''; await agregarArchivos(a); };
+  const alElegirFotos = async (e) => {
+    let a;
+    try { a = await copiarArchivos([...e.target.files]); } catch (err) { e.target.value = ''; toast('No se pudieron leer las fotos elegidas: ' + (err.message || err), 'error'); return; }
+    e.target.value = '';
+    await agregarArchivos(a);
+  };
+  $('#in-camara').onchange = alElegirFotos;
+  $('#in-galeria').onchange = alElegirFotos;
 
   // ----- guardar -----
   async function guardar(otro) {

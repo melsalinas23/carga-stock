@@ -6,7 +6,7 @@ import { normSku } from './config.js';
 import { editorFoto } from './vista-producto.js';
 import { extDe } from './imagen.js';
 import { icono } from './iconos.js';
-import { $, $$, esc, toast, uid, aBase64 } from './util.js';
+import { $, $$, esc, toast, uid, aBase64, copiarArchivos } from './util.js';
 import { tiendas, tiendaActual, fijarTienda, tiendasConectadas, selectorTiendaHtml } from './tn.js';
 
 const COLA = 'fotos_rapidas_cola';      // [{ id, sku, tienda, nombre, productoId, enTienda, reemplazar, fotos: [{ id, ext, blob }], estado, error }]
@@ -100,8 +100,16 @@ export async function vistaFotos(raiz, ctx) {
     const f = $('#f-sku');
     if (f) { f.onsubmit = (e) => { e.preventDefault(); buscarSku($('#i-sku').value); }; if (!ocupado) setTimeout(() => $('#i-sku')?.focus({ preventScroll: true }), 50); }
     $('#b-otro') && ($('#b-otro').onclick = descartarActual);
-    $('#in-cam') && ($('#in-cam').onchange = (e) => { const a = [...e.target.files]; e.target.value = ''; agregar(a); });
-    $('#in-gal') && ($('#in-gal').onchange = (e) => { const a = [...e.target.files]; e.target.value = ''; agregar(a); });
+    const alElegir = async (e) => {
+      const elegidos = [...e.target.files];
+      let copias;
+      try { copias = await copiarArchivos(elegidos); }
+      catch (err) { e.target.value = ''; aviso = { mal: true, txt: `No se pudieron leer las fotos elegidas (${err.message || err}). Probá de nuevo.` }; pintar(); return; }
+      e.target.value = '';
+      agregar(copias);
+    };
+    $('#in-cam') && ($('#in-cam').onchange = alElegir);
+    $('#in-gal') && ($('#in-gal').onchange = alElegir);
     $$('[data-quitar]').forEach((b) => (b.onclick = async () => { item.fotos.splice(+b.dataset.quitar, 1); await guardarCola(); pintar(); }));
     $('#c-reemp') && ($('#c-reemp').onchange = async (e) => { item.reemplazar = e.target.checked; await guardarCola(); });
     $('#c-mostrar') && ($('#c-mostrar').onchange = async (e) => { item.mostrar = e.target.checked; fijarPrefMostrar(item.mostrar); await guardarCola(); pintar(); });
@@ -129,12 +137,16 @@ export async function vistaFotos(raiz, ctx) {
   }
 
   async function agregar(archivos) {
+    let agregadas = 0;
     for (const archivo of archivos) {
       const r = await editorFoto(archivo);
       if (!r) continue;
       item.fotos.push({ id: uid(), ext: extDe(r.blob), blob: r.blob });
+      agregadas++;
       await guardarCola(); pintar();
     }
+    // si alguna foto se descartó o no se pudo abrir, se dice cuántas quedaron
+    if (archivos.length > 1 && agregadas < archivos.length) { aviso = { mal: true, txt: `Se agregaron ${agregadas} de ${archivos.length} fotos. Las demás se descartaron o no se pudieron abrir.` }; pintar(); }
   }
 
   async function descartarActual() {
