@@ -24,6 +24,7 @@ export async function vistaExportar(raiz, ctx) {
   const bloqueado = (p) => info.get(p.id).some((x) => x.critico);
 
   raiz.innerHTML = `
+    <a class="panel" href="#/precios" style="display:flex;align-items:center;gap:12px;padding:14px 16px;margin:0 0 14px;text-decoration:none;color:inherit">${icono('exportar', 24)}<span><b>Actualizar precios desde una lista</b><br><span class="ayuda">¿Cambió la lista de precios? Subís el archivo, ves qué cambia y confirmás.</span></span></a>
     <div class="exp-cols">
       <section class="panel paso">
         <div>
