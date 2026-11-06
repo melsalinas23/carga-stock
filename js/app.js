@@ -12,6 +12,7 @@ import { vistaProducto } from './vista-producto.js';
 import { vistaExportar } from './vista-exportar.js';
 import { vistaFotos } from './vista-fotos.js';
 import { vistaMasiva } from './vista-masiva.js';
+import { vistaPrecios } from './vista-precios.js';
 import { vistaAjustes, vistaLogin } from './vista-ajustes.js';
 
 const HOST_LOCAL = ['localhost', '127.0.0.1', '[::1]'];
@@ -34,6 +35,7 @@ const RUTAS = {
   producto: { vista: (r, c, id) => vistaProducto(r, c, id), tab: 'lista', titulo: 'Editar <em>producto</em>' },
   fotos: { vista: vistaFotos, tab: 'fotos', titulo: 'Fotos <em>rápidas</em>' },
   masiva: { vista: vistaMasiva, tab: 'fotos', titulo: 'Carga <em>masiva</em>' },
+  precios: { vista: vistaPrecios, tab: 'exportar', titulo: 'Actualizar <em>precios</em>' },
   exportar: { vista: vistaExportar, tab: 'exportar', titulo: 'Exportar a <em>Tienda Nube</em>' },
   ajustes: { vista: vistaAjustes, tab: 'ajustes', titulo: 'Ajustes de la <em>cuenta</em>' },
   login: { vista: vistaLogin, tab: 'ajustes', titulo: 'Iniciar <em>sesión</em>' },

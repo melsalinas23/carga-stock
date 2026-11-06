@@ -186,6 +186,7 @@ async function iniciarTN(todos) {
         <div class="fila-botones col"><button class="btn primario" id="b-tn" ${hay && (op.datos || op.fotos) ? '' : 'disabled'}>${icono('imagen', 20)}Revisar y enviar (${hay})</button></div>
         <div id="tn-prog" class="progreso" hidden><div class="barra"><i id="tn-barra"></i></div><span id="tn-txt"></span></div>
         <ul class="ayuda" id="tn-res" style="padding-left:18px;margin:8px 0 0">${informe.map(li).join('')}</ul>
+        <p class="ayuda" style="margin:14px 0 0">¿Cambió la lista de precios? <a href="#/precios"><b>Actualizar precios desde una lista</b></a></p>
       </div>`;
     const sel = $('#tn-tienda');
     if (sel) sel.onchange = () => {
