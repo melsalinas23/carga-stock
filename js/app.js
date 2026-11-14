@@ -15,6 +15,7 @@ import { vistaMasiva } from './vista-masiva.js';
 import { vistaPrecios } from './vista-precios.js';
 import { vistaTaller } from './vista-taller.js';
 import { vistaAjustes, vistaLogin } from './vista-ajustes.js';
+import { vistaUsuarios, abrirCambiarClave } from './vista-usuarios.js';
 
 const HOST_LOCAL = ['localhost', '127.0.0.1', '[::1]'];
 
@@ -40,6 +41,7 @@ const RUTAS = {
   taller: { vista: vistaTaller, tab: 'fotos', titulo: 'Taller de <em>imágenes</em>' },
   exportar: { vista: vistaExportar, tab: 'exportar', titulo: 'Exportar a <em>Tienda Nube</em>' },
   ajustes: { vista: vistaAjustes, tab: 'ajustes', titulo: 'Ajustes de la <em>cuenta</em>' },
+  usuarios: { vista: vistaUsuarios, tab: 'ajustes', titulo: 'Usuarios y <em>accesos</em>' },
   login: { vista: vistaLogin, tab: 'ajustes', titulo: 'Iniciar <em>sesión</em>' },
 };
 
@@ -99,6 +101,11 @@ async function modoImagenes() {
   salir.className = 'sync local';
   salir.innerHTML = `${icono('usuario', 18)}<span>Cerrar sesión</span>`;
   salir.onclick = async () => { await remote.salir(); location.reload(); };
+  const pie = document.createElement('p');
+  pie.className = 'pie-clave';
+  pie.innerHTML = '<button class="btn chico" id="btn-clave" type="button">Cambiar mi clave</button>';
+  pie.firstChild.onclick = abrirCambiarClave;
+  raiz().after(pie);
   remote.escucharSesion((evento) => { if (evento === 'SIGNED_OUT') location.reload(); });
   await vistaTaller(raiz(), ctx);
 }

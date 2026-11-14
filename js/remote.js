@@ -50,6 +50,25 @@ export async function miPerfil() {
   return (await esEquipo()) ? 'equipo' : null;
 }
 
+// ¿Quien tiene sesión administra la app? Puede crear y quitar usuarios (función es_admin de usuarios.sql).
+export async function esAdmin() {
+  try { const { data, error } = await client.rpc('es_admin'); return !error && data === true; } catch { return false; }
+}
+
+// Administración de usuarios (función `usuarios` de Supabase): listar, crear, clave nueva, quitar. Solo responde a administradores.
+export const usuarios = (accion, datos = {}) => invocarFuncion('usuarios', accion, datos);
+
+// Cambia la clave de quien tiene sesión. Pide la actual para confirmar que es la misma persona (y de paso renueva la
+// sesión, que Supabase puede exigir para cambiar la clave).
+export async function cambiarMiClave(actual, nueva) {
+  const ses = await sesion();
+  if (!ses?.user?.email) throw new Error('No hay sesión iniciada');
+  const { error: errActual } = await client.auth.signInWithPassword({ email: ses.user.email, password: actual });
+  if (errActual) throw new Error('La clave actual no es correcta');
+  const { error } = await client.auth.updateUser({ password: nueva });
+  if (error) throw new Error(/same|different/i.test(error.message) ? 'La clave nueva tiene que ser distinta de la actual' : error.message);
+}
+
 export async function traerCambios(desde) {
   const todos = [];
   let cursor = desde || null;
@@ -85,14 +104,15 @@ export async function borrarFotos(paths) {
 export const urlFoto = (path) => client.storage.from('fotos').getPublicUrl(path).data.publicUrl;
 
 // Puente con la API de Tienda Nube (función `tiendanube` de Supabase): el permiso de la tienda vive solo en el servidor.
-export async function tiendaNube(accion, datos = {}) {
-  const { data, error } = await client.functions.invoke('tiendanube', { body: { accion, ...datos } });
+export const tiendaNube = (accion, datos = {}) => invocarFuncion('tiendanube', accion, datos);
+async function invocarFuncion(funcion, accion, datos = {}) {
+  const { data, error } = await client.functions.invoke(funcion, { body: { accion, ...datos } });
   if (error) {
     let msg = error.message;
     try { msg = (await error.context.json()).error || msg; } catch { /* sin detalle del servidor */ }
     throw new Error(msg);
   }
-  if (!data?.ok) throw new Error(data?.error || 'Tienda Nube no respondió bien');
+  if (!data?.ok) throw new Error(data?.error || 'El servidor no respondió bien');
   return data;
 }
 

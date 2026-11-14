@@ -498,3 +498,12 @@ body[data-acceso="cerrado"] .marca-k { display: block; }
 .damero { background-color: #fff; background-image: linear-gradient(45deg, #e6e6e6 25%, transparent 25%, transparent 75%, #e6e6e6 75%), linear-gradient(45deg, #e6e6e6 25%, transparent 25%, transparent 75%, #e6e6e6 75%); background-size: 20px 20px; background-position: 0 0, 10px 10px; }
 body[data-perfil="imagenes"] #tabs, body[data-perfil="imagenes"] .atras { display: none !important; }
 @media (min-width: 960px) { body[data-perfil="imagenes"] { padding-left: 0; } body[data-perfil="imagenes"] #toasts { left: 0; } }
+
+/* ===== Usuarios y accesos ===== */
+.usuarios { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.usuario { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--linea); border-radius: 12px; background: var(--sup); }
+.usuario-dato { min-width: 0; overflow-wrap: anywhere; }
+.usuario-botones { display: flex; gap: 8px; flex-wrap: wrap; }
+.clave-caja { display: grid; gap: 2px; margin: 12px 0; padding: 14px; border: 1px dashed var(--linea); border-radius: 12px; background: var(--fondo, transparent); overflow-wrap: anywhere; }
+.clave-caja code { font-size: var(--t-lg); font-weight: 800; letter-spacing: .04em; user-select: all; }
+.pie-clave { text-align: center; margin: 4px 16px 28px; }

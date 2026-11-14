@@ -7,6 +7,7 @@ import { construirBackup, leerBackup } from './exportar.js';
 import { esc, $, $$, toast, descargar, parseNum, abrirModal, cerrarModal, sinTildes } from './util.js';
 import { icono } from './iconos.js';
 import { aplicarTema, temaGuardado } from './tema.js';
+import { abrirCambiarClave } from './vista-usuarios.js';
 
 const lineas = (t) => String(t).split(/\r?\n|,/).map((x) => x.trim()).filter(Boolean);
 
@@ -76,6 +77,12 @@ export async function vistaAjustes(raiz, ctx) {
   <section class="panel">
     <h3>Base compartida (varios teléfonos y computadoras)</h3>
     <div id="nube"></div>
+  </section>
+
+  <section class="panel" id="usuarios-panel" hidden>
+    <h3>Usuarios y accesos</h3>
+    <p class="ayuda">Creá usuarios para otras personas (por ejemplo, un proveedor que solo use el Taller de imágenes), dales una clave nueva o quitales el acceso.</p>
+    <a class="btn primario" href="#/usuarios">Administrar usuarios</a>
   </section>
 
   <section class="panel">
@@ -209,11 +216,13 @@ export async function vistaAjustes(raiz, ctx) {
     nube.innerHTML = `
       <p>Estado: <b>${ses ? esc(e.texto) : 'sin iniciar sesión'}</b>${ses ? ` · ${esc(ses.user.email)}` : ''}</p>
       <div class="fila-botones">
-        ${ses ? `<button class="btn primario" id="n-sync">Sincronizar ahora</button><button class="btn" id="n-salir">Cerrar sesión</button>` : `<a class="btn primario" href="#/login">Iniciar sesión</a>`}
+        ${ses ? `<button class="btn primario" id="n-sync">Sincronizar ahora</button><button class="btn" id="n-clave">Cambiar mi clave</button><button class="btn" id="n-salir">Cerrar sesión</button>` : `<a class="btn primario" href="#/login">Iniciar sesión</a>`}
         ${localStorage.getItem('sb_url') ? '<button class="btn peligro" id="n-desc">Desconectar</button>' : ''}
       </div>`;
     const bs = $('#n-sync'); if (bs) bs.onclick = async () => { bs.disabled = true; const r = await store.sincronizar(); toast(r.ok ? `Sincronizado (${r.subidos} subidos, ${r.bajados} bajados)` : 'No se pudo sincronizar: ' + (r.motivo || (r.errores || []).join('; ')), r.ok ? '' : 'error'); ctx.recargar(); };
     const sal = $('#n-salir'); if (sal) sal.onclick = async () => { await remote.salir(); location.hash = '#/login'; location.reload(); };
+    const bk = $('#n-clave'); if (bk) bk.onclick = abrirCambiarClave;
+    if (ses) remote.esAdmin().then((si) => { const p = $('#usuarios-panel'); if (si && p) p.hidden = false; });
     const des = $('#n-desc'); if (des) des.onclick = () => { if (confirm('¿Desconectar la base compartida de este equipo? Los productos locales no se borran.')) { localStorage.removeItem('sb_url'); localStorage.removeItem('sb_key'); location.reload(); } };
   }
 
