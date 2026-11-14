@@ -13,6 +13,7 @@ import { vistaExportar } from './vista-exportar.js';
 import { vistaFotos } from './vista-fotos.js';
 import { vistaMasiva } from './vista-masiva.js';
 import { vistaPrecios } from './vista-precios.js';
+import { vistaTaller } from './vista-taller.js';
 import { vistaAjustes, vistaLogin } from './vista-ajustes.js';
 
 const HOST_LOCAL = ['localhost', '127.0.0.1', '[::1]'];
@@ -36,6 +37,7 @@ const RUTAS = {
   fotos: { vista: vistaFotos, tab: 'fotos', titulo: 'Fotos <em>rápidas</em>' },
   masiva: { vista: vistaMasiva, tab: 'fotos', titulo: 'Carga <em>masiva</em>' },
   precios: { vista: vistaPrecios, tab: 'exportar', titulo: 'Actualizar <em>precios</em>' },
+  taller: { vista: vistaTaller, tab: 'fotos', titulo: 'Taller de <em>imágenes</em>' },
   exportar: { vista: vistaExportar, tab: 'exportar', titulo: 'Exportar a <em>Tienda Nube</em>' },
   ajustes: { vista: vistaAjustes, tab: 'ajustes', titulo: 'Ajustes de la <em>cuenta</em>' },
   login: { vista: vistaLogin, tab: 'ajustes', titulo: 'Iniciar <em>sesión</em>' },
@@ -88,6 +90,19 @@ function mostrarAcceso(modo, detalle = '', conf = null) {
   const b = $('#a-reintentar'); if (b) b.onclick = () => location.reload();
 }
 
+// Perfil «imágenes»: solo el Taller de imágenes (todo se hace en el equipo). No ve productos ni tiendas del negocio.
+async function modoImagenes() {
+  document.body.dataset.perfil = 'imagenes';
+  document.title = 'Taller de imágenes · Marketing KAI';
+  $('#titulo').innerHTML = 'Taller de <em>imágenes</em>';
+  const salir = $('#sync-estado');
+  salir.className = 'sync local';
+  salir.innerHTML = `${icono('usuario', 18)}<span>Cerrar sesión</span>`;
+  salir.onclick = async () => { await remote.salir(); location.reload(); };
+  remote.escucharSesion((evento) => { if (evento === 'SIGNED_OUT') location.reload(); });
+  await vistaTaller(raiz(), ctx);
+}
+
 async function arrancar() {
   const url = localStorage.getItem('sb_url') || appConfig.supabaseUrl;
   const key = localStorage.getItem('sb_key') || appConfig.supabaseKey;
@@ -112,9 +127,10 @@ async function arrancar() {
     if (!acceso.recordado(conf)) { mostrarAcceso('clave', '', conf); return; }
   } else if (exige && !sesion) { mostrarAcceso('login'); return; }
   if (exige && sesion) {
-    let permitido = false;
-    try { permitido = await remote.esEquipo(); } catch (e) { console.error(e); mostrarAcceso('error', 'No se pudo comprobar tu permiso: ' + (e.message || e)); return; }
-    if (!permitido) { await remote.salir(); mostrarAcceso('sin-permiso'); return; }
+    let perfil = null;
+    try { perfil = await remote.miPerfil(); } catch (e) { console.error(e); mostrarAcceso('error', 'No se pudo comprobar tu permiso: ' + (e.message || e)); return; }
+    if (!perfil) { await remote.salir(); mostrarAcceso('sin-permiso'); return; }
+    if (perfil === 'imagenes') { await modoImagenes(); return; }   // perfil de solo imágenes: sin productos, sin sincronización, sin tiendas
   }
   if (hayBase && remote.configurado()) remote.escucharSesion((evento) => { if (evento === 'SIGNED_OUT') location.reload(); });
 

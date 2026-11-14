@@ -153,7 +153,7 @@ function colorEsquinas(canvas) {
 
 // Arma la foto final según el modo elegido.
 //  quitar_fondo → producto recortado sobre blanco | ajustar → foto completa en cuadrado | original → solo tamaño
-export function componer(modo, { original, recorte }, { tam = 1200, margen = 0.08, sombra = true, mejorar = true } = {}) {
+export function componer(modo, { original, recorte }, { tam = 1200, margen = 0.08, sombra = true, mejorar = true, fondo = 'blanco' } = {}) {
   if (modo === 'original') return reducir(original, tam * 1.4);
 
   if (modo === 'ajustar') {
@@ -174,17 +174,18 @@ export function componer(modo, { original, recorte }, { tam = 1200, margen = 0.0
   prod.getContext('2d').drawImage(recorte, caja.x, caja.y, caja.w, caja.h, 0, 0, caja.w, caja.h);
   if (mejorar) autoNiveles(prod);
   const out = crearCanvas(tam, tam), ctx = out.getContext('2d');
-  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, tam, tam);
+  if (fondo !== 'transparente') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, tam, tam); }
   const area = tam * (1 - 2 * margen), r = Math.min(area / caja.w, area / caja.h);
   const w = caja.w * r, h = caja.h * r;
   ctx.imageSmoothingQuality = 'high';
-  if (sombra) {
+  const nivel = sombra === true ? 1 : Number(sombra) || 0;   // 0 sin sombra · 1 suave · 2 marcada
+  if (nivel) {
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.22)'; ctx.shadowBlur = tam * 0.025; ctx.shadowOffsetY = tam * 0.012;
+    ctx.shadowColor = nivel === 2 ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.22)'; ctx.shadowBlur = tam * (nivel === 2 ? 0.04 : 0.025); ctx.shadowOffsetY = tam * (nivel === 2 ? 0.02 : 0.012);
     ctx.drawImage(prod, (tam - w) / 2, (tam - h) / 2, w, h);
     ctx.restore();
   } else ctx.drawImage(prod, (tam - w) / 2, (tam - h) / 2, w, h);
-  if (mejorar) afilar(out);
+  if (mejorar && fondo !== 'transparente') afilar(out);
   return out;
 }
 
@@ -195,3 +196,10 @@ export async function codificar(canvas, calidad = 0.85) {
   return b;
 }
 export const extDe = (blob) => (blob.type === 'image/webp' ? 'webp' : blob.type === 'image/png' ? 'png' : 'jpg');
+
+// Formato a elección: 'jpg' · 'webp' · 'png' (el PNG conserva la transparencia)
+export async function codificarComo(canvas, formato = 'webp', calidad = 0.9) {
+  if (formato === 'png') return aBlob(canvas, 'image/png');
+  if (formato === 'jpg') return aBlob(canvas, 'image/jpeg', Math.max(calidad, 0.9));
+  return codificar(canvas, calidad);
+}

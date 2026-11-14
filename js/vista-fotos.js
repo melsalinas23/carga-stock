@@ -72,7 +72,8 @@ export async function vistaFotos(raiz, ctx) {
         <div class="fila-botones col"><button class="btn primario" type="submit" id="b-buscar" ${ocupado ? 'disabled' : ''}>${icono('buscar', 20)}Buscar producto</button></div>
       </form>
       <p class="ayuda" style="margin:10px 0 0">La app busca el producto en la tienda y te muestra su nombre para que confirmes que es el correcto.</p>
-      <p class="ayuda" style="margin:14px 0 0">¿Tenés muchas fotos con el SKU en el nombre del archivo? <a href="#/masiva"><b>Carga masiva por nombre de archivo</b></a></p>`;
+      <p class="ayuda" style="margin:14px 0 0">¿Tenés muchas fotos con el SKU en el nombre del archivo? <a href="#/masiva"><b>Carga masiva por nombre de archivo</b></a></p>
+      <p class="ayuda" style="margin:8px 0 0">¿Solo querés quitarles el fondo y bajarlas en un ZIP? <a href="#/taller"><b>Taller de imágenes</b></a></p>`;
   }
 
   function bloqueProducto() {

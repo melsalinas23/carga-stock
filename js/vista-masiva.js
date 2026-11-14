@@ -49,7 +49,7 @@ async function expandirZip(zipFile) {
   return salida;
 }
 
-async function reunir(archivos) {
+export async function reunir(archivos) {
   const salida = [];
   for (const f of archivos) {
     const ruta = f.webkitRelativePath || f.name;
@@ -61,7 +61,7 @@ async function reunir(archivos) {
   return salida;
 }
 
-async function archivosDeEntrada(entrada) {
+export async function archivosDeEntrada(entrada) {
   if (entrada.isFile) return [await new Promise((ok, mal) => entrada.file(ok, mal))];
   const lector = entrada.createReader(), todos = [];
   for (;;) {

@@ -1,5 +1,5 @@
 // Procesa una foto sin pantalla, con las mismas opciones del editor de fotos. Lo usa la carga masiva.
-import { leerOriginal, quitarFondo, componer, codificar, aBlob } from './imagen.js';
+import { leerOriginal, quitarFondo, componer, codificar, codificarComo, aBlob } from './imagen.js';
 import { cfg } from './config.js';
 
 export const MODOS_FOTO = [
@@ -24,4 +24,20 @@ export async function procesarFoto(archivo, modo) {
   }
   const lienzo = componer(modoFinal, { original, recorte }, { tam: fc.tam || 1200, margen: fc.margen ?? 0.08, sombra: fc.sombra !== false, mejorar: fc.mejorar !== false });
   return { blob: await codificar(lienzo, fc.calidad || 0.85), orig: await aBlob(original, 'image/jpeg', 0.85), tipo: modoFinal, aviso };
+}
+
+// Taller de imágenes: quitar fondo (opcional), centrar en un cuadrado, sombra a elección y formato de salida a elección.
+// opciones: quitar (true/false) · fondo 'blanco' | 'transparente' · sombra 0/1/2 · tam (px) · margen · mejorar · formato 'jpg' | 'webp' | 'png'
+// Devuelve { blob, ext, modo, aviso }. Con fondo transparente la salida es siempre PNG.
+export async function procesarTaller(archivo, { quitar = true, fondo = 'blanco', sombra = 1, tam = 1200, margen = 0.08, mejorar = true, formato = 'jpg' } = {}) {
+  const original = await leerOriginal(archivo, Math.min(2400, Math.max(1600, tam)));
+  let modo = quitar ? 'quitar_fondo' : 'ajustar', recorte = null, aviso = '';
+  if (modo === 'quitar_fondo') {
+    try { recorte = await quitarFondo(original); }
+    catch (e) { console.error(e); modo = 'ajustar'; aviso = 'no se pudo quitar el fondo: quedó solo ajustada'; }
+  }
+  const transparente = modo === 'quitar_fondo' && fondo === 'transparente';
+  const lienzo = componer(modo, { original, recorte }, { tam, margen, sombra, mejorar, fondo: transparente ? 'transparente' : 'blanco' });
+  const blob = await codificarComo(lienzo, transparente ? 'png' : formato, 0.92);
+  return { blob, ext: blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg', modo, aviso };
 }

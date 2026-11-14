@@ -42,6 +42,14 @@ export async function esEquipo() {
   return data === true;
 }
 
+// Perfil de acceso: 'equipo' (usa todo), 'imagenes' (solo el Taller de imágenes) o null (sin permiso).
+// Si la función mi_perfil todavía no existe en la base, se usa la lista de equipo como antes.
+export async function miPerfil() {
+  const { data, error } = await client.rpc('mi_perfil');
+  if (!error) return data || null;
+  return (await esEquipo()) ? 'equipo' : null;
+}
+
 export async function traerCambios(desde) {
   const todos = [];
   let cursor = desde || null;
